@@ -3,11 +3,12 @@ import urlparse
 import logging
 import sys
 import tempfile
-import yum
 import createrepo
+import yum
 import boto
 import os
 import shutil
+from rpmUtils.miscutils import splitFilename
 
 # Logger
 logger = logging.getLogger()
@@ -75,11 +76,14 @@ class S3Grabber(object):
 def update_repodata(bucketName, key, operation):
     fileName = key[key.rfind("/")+1:]
     repoPath = key[:key.rfind("/")]
+    (name, version, release, epoch, arch) = splitFilename(fileName)
 
     logger.info("fileName={0}".format(fileName))
     logger.info("repoPath={0}".format(repoPath))
 
     tmpdir = tempfile.mkdtemp()
+    logger.info("tempdir={0}".format(tmpdir))
+
     s3base = urlparse.urlunsplit(("s3", bucketName, repoPath, "", ""))
     s3grabber = S3Grabber(s3base)
 
@@ -103,18 +107,20 @@ def update_repodata(bucketName, key, operation):
     mdgen.tempdir = tmpdir
     mdgen._grabber = s3grabber
 
+    new_packages = yum.packageSack.PackageSack()
     if operation == "add":
         # Combine existing package sack with new rpm file list
-        new_packages = yum.packageSack.PackageSack()
+
         newpkg = mdgen.read_in_package(os.path.join(s3base, fileName))
         newpkg._baseurl = ''   # don't leave s3 base urls in primary metadata
         new_packages.addPackage(newpkg)
     else:
         # Remove deleted package
         logger.info("Delete package {0}".format(key))
-        yumbase.pkgSack.delPackage()
-
-
+        older_pkgs = yumbase.pkgSack.searchNevra(name=name)
+        for i, older in enumerate(older_pkgs, 1):
+            if older.version == version and older.release == release:
+                yumbase.pkgSack.delPackage(older)
 
     mdconf.pkglist.addSack('existing', yumbase.pkgSack)
     mdconf.pkglist.addSack('new', new_packages)
