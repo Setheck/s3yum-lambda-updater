@@ -5,7 +5,7 @@ import sys
 import tempfile
 import createrepo
 import yum
-import boto
+import boto3
 import os
 import shutil
 from rpmUtils.miscutils import splitFilename
@@ -36,7 +36,7 @@ class S3Grabber(object):
         base = urlparse.urlsplit(baseurl)
         self.baseurl = baseurl
         self.basepath = base.path.lstrip('/')
-        self.bucket = boto.connect_s3().get_bucket(base.netloc)
+        self.bucket = boto3.resource('s3').get_bucket(base.netloc)
 
     def _getkey(self, url):
         if url.startswith(self.baseurl):
