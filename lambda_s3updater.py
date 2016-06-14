@@ -73,7 +73,7 @@ class S3Grabber(object):
 
 
 def update_repodata(bucketName, key, operation):
-    if key.rFind("/") > -1:
+    if key.rfind("/") > -1:
       fileName = key[key.rfind("/")+1:]
       repoPath = key[:key.rfind("/")]
     else:
