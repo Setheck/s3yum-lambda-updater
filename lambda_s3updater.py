@@ -12,7 +12,8 @@ from rpmUtils.miscutils import splitFilename
 
 # Logger
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+level = os.getenv('LOG_LEVEL', 'INFO')
+logger.setLevel(level)
 
 # Hack for creating s3 urls
 urlparse.uses_relative.append('s3')
