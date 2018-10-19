@@ -4,7 +4,7 @@ lambda:
 	mkdir archive
 	cp lambda_s3updater.py archive/
 	cp -r vendor/* archive/
-	zip archive.zip archive/*
+	cd archive && zip -r ../archive.zip *
 
 clean:
 	rm -rf archive archive.zip
