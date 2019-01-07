@@ -77,10 +77,10 @@ class S3Grabber(object):
 
 # Extract the repo and relativeFile from the s3 key.
 # repoIdx should be the value of the segment that determines where the repo ends
-# example: if key is unstable/rhel/7/x86_64/test.rpm and repoIdx is 3,
-#   the return values will be ('unstable/rhel/7', 'x86_64/test.rpm')
+# example: if key is unstable/rhel/7/x86_64/test.rpm and repoIdx is 4,
+#   the return values will be ('unstable/rhel/7/x86_64', 'test.rpm')
 def extract_repo_file(key):
-    repoIdx = 3
+    repoIdx = 4
     segments = key.split("/")
     repoPath = string.join(segments[0:repoIdx], "/")
     relativeFile = key.partition(repoPath)[-1].lstrip("/")
