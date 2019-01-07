@@ -1,7 +1,8 @@
-
+import ssl
+import string
 import urlparse
 import logging
-# import sys  # For StreamHandler
+#import sys  # For StreamHandler
 import tempfile
 import createrepo
 import yum
@@ -19,8 +20,8 @@ logger.setLevel(level)
 urlparse.uses_relative.append('s3')
 urlparse.uses_netloc.append('s3')
 
-# sh = logging.StreamHandler(sys.stdout)
-# logger.addHandler(sh)
+#sh = logging.StreamHandler(sys.stdout)
+#logger.addHandler(sh)
 
 class LoggerCallback(object):
     def errorlog(self, message):
@@ -74,14 +75,22 @@ class S3Grabber(object):
                 logging.debug('removing: %s', key.name)
                 key.delete()
 
+# Extract the repo and relativeFile from the s3 key.
+# repoIdx should be the value of the segment that determines where the repo ends
+# example: if key is unstable/rhel/7/x86_64/test.rpm and repoIdx is 3,
+#   the return values will be ('unstable/rhel/7', 'x86_64/test.rpm')
+def extract_repo_file(key):
+    repoIdx = 3
+    segments = key.split("/")
+    repoPath = string.join(segments[0:repoIdx], "/")
+    relativeFile = key.partition(repoPath)[-1].lstrip("/")
+    return repoPath, relativeFile
 
 def update_repodata(bucketName, key, operation):
-    logging.debug('Key: %s', key)
+    logger.debug("key={0}".format(key))
     if key.rfind("/") > -1:
       fileName = key[key.rfind("/")+1:]
-      p = key.partition('/')
-      repoPath = p[0]  # repoPath is always under first dir.
-      relativeFileName = p[2]
+      (repoPath, relativeFileName) = extract_repo_file(key)
       packagePath = relativeFileName[:relativeFileName.rfind("/")]
     else:
       fileName = key
@@ -160,6 +169,11 @@ def handle(event, context):
     key = s3Elem['object']['key']
 
     logger.debug("Got Event {0}:{1}/{2}".format(eventType, bucketName, key))
+
+    # HACK: the following ssl check, allows boto (2.7) to access buckets with '.'
+    # this is likely less secure, but since communication is only from lambda to s3 probably not a real issue
+    if hasattr(ssl, '_create_unverified_context'):
+      ssl._create_default_https_context = ssl._create_unverified_context
 
     if "Created" in eventType:
         update_repodata(bucketName, key, "add")
